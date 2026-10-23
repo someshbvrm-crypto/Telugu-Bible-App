@@ -1,0 +1,8 @@
+{
+  "name": "Telugu Bible",
+  "description": "A comprehensive Telugu Bible app for daily reading, study notes, bookmarks, flashcards, reading plan tracker, and offline study.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

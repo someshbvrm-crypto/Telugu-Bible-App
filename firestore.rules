@@ -1,0 +1,134 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidNote(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 300 &&
+             data.content is string && data.content.size() <= 20000 &&
+             data.bookName is string && data.bookName.size() <= 100 &&
+             data.chapter is int && data.chapter >= 1 && data.chapter <= 150 &&
+             data.verse is int && data.verse >= 0 && data.verse <= 200 &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20 && (data.tags.size() == 0 || data.tags[0] is string))) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidBookmark(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.bookId is string && data.bookId.size() <= 30 &&
+             data.bookName is string && data.bookName.size() <= 100 &&
+             data.chapter is int && data.chapter >= 1 && data.chapter <= 150 &&
+             data.verse is int && data.verse >= 1 && data.verse <= 200 &&
+             data.text is string && data.text.size() <= 3000 &&
+             data.color is string && data.color.size() <= 20;
+    }
+
+    function isValidReadingPlan(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.planName is string && data.planName.size() <= 100 &&
+             data.currentDay is int && data.currentDay >= 1 && data.currentDay <= 1000 &&
+             data.totalDays is int && data.totalDays >= 1 && data.totalDays <= 1000 &&
+             data.streakDays is int && data.streakDays >= 0 && data.streakDays <= 5000 &&
+             data.completedDays is list && data.completedDays.size() <= 1000 &&
+             (!('lastReadDate' in data) || (data.lastReadDate is string && data.lastReadDate.size() <= 30)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidFlashcard(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.frontPrompt is string && data.frontPrompt.size() >= 1 && data.frontPrompt.size() <= 1000 &&
+             data.backAnswer is string && data.backAnswer.size() >= 1 && data.backAnswer.size() <= 3000 &&
+             data.scriptureRef is string && data.scriptureRef.size() <= 100 &&
+             data.reviewCount is int && data.reviewCount >= 0 && data.reviewCount <= 100000 &&
+             data.mastered is bool &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+
+      match /notes/{noteId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(noteId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().keys().hasAll(['userId', 'title', 'content', 'bookName', 'chapter', 'verse', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'content', 'bookName', 'chapter', 'verse', 'tags', 'createdAt', 'updatedAt']) &&
+                         isValidNote(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(noteId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidNote(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'bookName', 'chapter', 'verse', 'tags', 'updatedAt']);
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(noteId);
+      }
+
+      match /bookmarks/{bookmarkId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(bookmarkId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().keys().hasAll(['userId', 'bookId', 'bookName', 'chapter', 'verse', 'text', 'color', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'bookId', 'bookName', 'chapter', 'verse', 'text', 'color', 'createdAt']) &&
+                         isValidBookmark(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(bookmarkId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidBookmark(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['color', 'text']);
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(bookmarkId);
+      }
+
+      match /readingPlans/{planId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(planId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'planName', 'currentDay', 'totalDays', 'completedDays', 'streakDays']) &&
+                         incoming().keys().hasOnly(['userId', 'planName', 'currentDay', 'totalDays', 'completedDays', 'streakDays', 'lastReadDate', 'updatedAt']) &&
+                         isValidReadingPlan(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(planId) &&
+                         incoming().userId == existing().userId &&
+                         isValidReadingPlan(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['currentDay', 'completedDays', 'streakDays', 'lastReadDate', 'updatedAt']);
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(planId);
+      }
+
+      match /flashcards/{flashcardId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(flashcardId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().keys().hasAll(['userId', 'frontPrompt', 'backAnswer', 'scriptureRef', 'reviewCount', 'mastered', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'frontPrompt', 'backAnswer', 'scriptureRef', 'reviewCount', 'mastered', 'createdAt', 'updatedAt']) &&
+                         isValidFlashcard(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(flashcardId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidFlashcard(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['frontPrompt', 'backAnswer', 'scriptureRef', 'reviewCount', 'mastered', 'updatedAt']);
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(flashcardId);
+      }
+    }
+  }
+}

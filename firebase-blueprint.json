@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "Note": {
+      "title": "Note",
+      "description": "User created Bible study notes attached to passages or topics",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "title": { "type": "string", "description": "Note title" },
+        "content": { "type": "string", "description": "Note markdown or text body" },
+        "bookName": { "type": "string", "description": "Telugu or English book name" },
+        "chapter": { "type": "integer", "description": "Chapter number" },
+        "verse": { "type": "integer", "description": "Verse number" },
+        "tags": { "type": "array", "description": "Tag list for filtering notes" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via serverTimestamp" }
+      },
+      "required": ["userId", "title", "content", "bookName", "chapter", "verse", "createdAt"]
+    },
+    "Bookmark": {
+      "title": "Bookmark",
+      "description": "Bookmarked and highlighted favorite Bible verses",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "bookId": { "type": "string", "description": "Book identifier code" },
+        "bookName": { "type": "string", "description": "Telugu book title" },
+        "chapter": { "type": "integer", "description": "Chapter number" },
+        "verse": { "type": "integer", "description": "Verse number" },
+        "text": { "type": "string", "description": "Telugu verse text" },
+        "color": { "type": "string", "description": "Highlight hex color code" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp" }
+      },
+      "required": ["userId", "bookId", "bookName", "chapter", "verse", "text", "color", "createdAt"]
+    },
+    "ReadingPlan": {
+      "title": "ReadingPlan",
+      "description": "User reading plan progress tracking and streaks",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "planName": { "type": "string", "description": "Name of reading plan" },
+        "currentDay": { "type": "integer", "description": "Current active day number" },
+        "totalDays": { "type": "integer", "description": "Total days in plan" },
+        "completedDays": { "type": "array", "description": "List of completed day integers" },
+        "streakDays": { "type": "integer", "description": "Consecutive days read" },
+        "lastReadDate": { "type": "string", "description": "YYYY-MM-DD string of last reading" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last progress update timestamp" }
+      },
+      "required": ["userId", "planName", "currentDay", "totalDays", "completedDays", "streakDays"]
+    },
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "Scripture memory flashcards for active recall and retention",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "frontPrompt": { "type": "string", "description": "Prompt, reference, or question" },
+        "backAnswer": { "type": "string", "description": "Telugu verse text or answer" },
+        "scriptureRef": { "type": "string", "description": "Scripture reference tag" },
+        "reviewCount": { "type": "integer", "description": "Times reviewed" },
+        "mastered": { "type": "boolean", "description": "Whether memorized" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via serverTimestamp" }
+      },
+      "required": ["userId", "frontPrompt", "backAnswer", "scriptureRef", "reviewCount", "mastered", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "Note",
+      "description": "User's private study notes for scripture chapters and verses"
+    },
+    "/users/{userId}/bookmarks/{bookmarkId}": {
+      "schema": "Bookmark",
+      "description": "User's bookmarked and highlighted favorite verses"
+    },
+    "/users/{userId}/readingPlans/{planId}": {
+      "schema": "ReadingPlan",
+      "description": "User's daily reading plan tracking and streak stats"
+    },
+    "/users/{userId}/flashcards/{flashcardId}": {
+      "schema": "Flashcard",
+      "description": "User's scripture flashcards for memory training"
+    }
+  }
+}
